@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vulnerability Scanner Tool</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #1e1e1e;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            overflow: hidden;
+            border: 1px solid #444;
+        }
+        .header {
+            background: linear-gradient(135deg, #8b0000 0%, #4b0082 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+        .content { padding: 30px; }
+        .input-section { margin-bottom: 30px; }
+        .input-section label {
+            display: block;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ff4444;
+        }
+        .code-type-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .code-type-btn {
+            padding: 10px 20px;
+            border: 2px solid #8b0000;
+            background: #1e1e1e;
+            color: #ff4444;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        .code-type-btn:hover { background: #333; }
+        .code-type-btn.active {
+            background: #8b0000;
+            color: white;
+        }
+        textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            border: 2px solid #444;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            direction: ltr;
+            text-align: left;
+            background: #121212;
+            color: #00ff00;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #8b0000;
+            box-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+        }
+        .scan-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #8b0000 0%, #4b0082 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 20px;
+        }
+        .scan-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(139, 0, 0, 0.6);
+        }
+        .results-section { margin-top: 30px; display: none; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-box { text-align: center; padding: 20px; border-radius: 10px; color: white; font-weight: bold; }
+        .stat-box.critical { background: #dc3545; }
+        .stat-box.high { background: #fd7e14; }
+        .stat-box.medium { background: #ffc107; color: #333; }
+        .stat-box.low { background: #28a745; }
+        .stat-box.total { background: #6c757d; }
+        .stat-number { font-size: 2.5em; display: block; margin-bottom: 5px; }
+        .stat-label { font-size: 0.9em; opacity: 0.9; }
+        .vulnerability-card {
+            background: #2c2c2c;
+            border: 2px solid #444;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .vulnerability-card:hover { box-shadow: 0 5px 15px rgba(139, 0, 0, 0.4); transform: translateY(-2px); }
+        .vulnerability-card.critical { border-left: 5px solid #dc3545; }
+        .vulnerability-card.high { border-left: 5px solid #fd7e14; }
+        .vulnerability-card.medium { border-left: 5px solid #ffc107; }
+        .vulnerability-card.low { border-left: 5px solid #28a745; }
+        .vulnerability-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .vulnerability-title { font-size: 1.3em; font-weight: bold; color: #ff4444; }
+        .severity-badge { padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 0.9em; }
+        .severity-critical { background: #dc3545; color: white; }
+        .severity-high { background: #fd7e14; color: white; }
+        .severity-medium { background: #ffc107; color: #333; }
+        .severity-low { background: #28a745; color: white; }
+        .vulnerability-description { color: #ccc; line-height: 1.6; margin-bottom: 15px; }
+        .code-snippet {
+            background: #121212; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace;
+            font-size: 0.9em; margin: 10px 0; direction: ltr; text-align: left; overflow-x: auto;
+            border-left: 3px solid #dc3545; white-space: pre-wrap; word-break: break-all; color: #00ff00;
+        }
+        .recommendation { background: #3a1e1e; border: 1px solid #8b0000; padding: 15px; border-radius: 5px; margin-top: 15px; }
+        .recommendation-title { font-weight: bold; color: #ff6666; margin-bottom: 5px; font-size: 1.1em; }
+        .recommendation-text { color: #ffaaaa; line-height: 1.6; }
+        .no-vulnerabilities { text-align: center; padding: 50px; background: #1e3a1e; border-radius: 10px; margin: 20px 0; }
+        .no-vulnerabilities h2 { color: #28a745; font-size: 2em; margin-bottom: 10px; }
+        .no-vulnerabilities p { color: #90ee90; font-size: 1.1em; }
+        .footer { text-align: center; padding: 20px; background: #000; color: #ff4444; font-weight: bold; font-size: 1.2em; border-top: 2px solid #8b0000; }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.8em; }
+            .stats { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 Vulnerability Scanner Tool</h1>
+            <p>Scan your code and detect potential security vulnerabilities</p>
+        </div>
+        <div class="content">
+            <div class="input-section">
+                <label>📝 Code Type:</label>
+                <div class="code-type-selector">
+                    <button class="code-type-btn active" data-type="auto">Auto</button>
+                    <button class="code-type-btn" data-type="html">HTML</button>
+                    <button class="code-type-btn" data-type="php">PHP</button>
+                    <button class="code-type-btn" data-type="javascript">JavaScript</button>
+                    <button class="code-type-btn" data-type="sql">SQL</button>
+                </div>
+                <label>💻 Paste your code here:</label>
+                <textarea id="codeInput" placeholder="Paste the code you want to scan here..."></textarea>
+                <button class="scan-btn" onclick="scanCode()">🔍 Scan for Vulnerabilities</button>
+            </div>
+            <div class="results-section" id="results">
+                <div class="stats" id="stats"></div>
+                <div id="vulnerabilities"></div>
+            </div>
+        </div>
+        <div class="footer">
+            Developed by R EVIL
+        </div>
+    </div>
+
+    <script>
+        let selectedType = 'auto';
+        document.querySelectorAll('.code-type-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.code-type-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                selectedType = this.dataset.type;
+            });
+        });
+
+        function scanCode() {
+            const code = document.getElementById('codeInput').value.trim();
+            if (!code) {
+                alert('⚠️ Please enter code to scan!');
+                return;
+            }
+            const vulnerabilities = detectVulnerabilities(code, selectedType);
+            displayResults(vulnerabilities);
+        }
+
+        function detectVulnerabilities(code, type) {
+            const vulnerabilities = [];
+            if (type === 'auto') {
+                type = detectCodeType(code);
+            }
+            checkXSS(code, vulnerabilities);
+            checkSQLInjection(code, vulnerabilities);
+            checkCSRF(code, vulnerabilities);
+            checkIDOR(code, vulnerabilities);
+            checkWeakCrypto(code, vulnerabilities);
+            checkPathTraversal(code, vulnerabilities);
+            checkCommandInjection(code, vulnerabilities);
+            checkHardcodedCredentials(code, vulnerabilities);
+            checkInsecureDeserialization(code, vulnerabilities);
+            if (type === 'html' || type === 'php') {
+                checkSecurityHeaders(code, vulnerabilities);
+            }
+            checkWeakPasswordRules(code, vulnerabilities);
+            checkOpenRedirects(code, vulnerabilities);
+            checkInformationDisclosure(code, vulnerabilities);
+            return vulnerabilities;
+        }
+
+        function detectCodeType(code) {
+            if (code.includes('<?php') || code.includes('<?=')) return 'php';
+            if (code.match(/<html|<body|<div|<script/i)) return 'html';
+            if (code.includes('SELECT') || code.includes('INSERT') || code.includes('UPDATE')) return 'sql';
+            if (code.includes('function') || code.includes('const ') || code.includes('let ')) return 'javascript';
+            return 'unknown';
+        }
+
+        function checkXSS(code, vulnerabilities) {
+            const xssPatterns = [
+                { pattern: /document\.write\s*\([^)]*\)/gi, desc: 'Use of document.write without sanitization' },
+                { pattern: /innerHTML\s*=\s*[^;]*(?!sanitize|escape)/gi, desc: 'Setting innerHTML without escaping data' },
+                { pattern: /eval\s*\(/gi, desc: 'Use of eval() - extremely dangerous' },
+                { pattern: /dangerouslySetInnerHTML/gi, desc: 'Use of dangerouslySetInnerHTML in React' },
+                { pattern: /<script[^>]*>.*?<\/script>/gi, desc: 'Script tags in HTML' },
+                { pattern: /echo\s+\$_(GET|POST|REQUEST)\[/gi, desc: 'Direct output of user input in PHP' },
+                { pattern: /\$\{.*?\}/g, desc: 'Template literals vulnerable to XSS' }
+            ];
+            xssPatterns.forEach(({pattern, desc}) => {
+                let match;
+                while ((match = pattern.exec(code)) !== null) {
+                    vulnerabilities.push({
+                        type: 'XSS - Cross Site Scripting',
+                        severity: 'critical',
+                        description: `Potential XSS vulnerability detected: ${desc}. Attacker can inject malicious JavaScript.`,
+                        code: match[0],
+                        line: getLineNumber(code, match.index),
+                        recommendation: 'Use escaping functions like htmlspecialchars() in PHP or textContent instead of innerHTML. Consider libraries like DOMPurify.'
+                    });
+                }
+            });
+        }
+
+        function checkSQLInjection(code, vulnerabilities) {
+            const sqlPatterns = [
+                { pattern: /query\s*\(\s*["'].*?\$_(GET|POST|REQUEST).*?["']\s*\)/gi, desc: 'Direct SQL query with user input' },
+                { pattern: /mysqli_query\s*\([^)]*\$_(GET|POST|REQUEST)/gi, desc: 'mysqli_query with unsanitized variables' },
+                { pattern: /SELECT\s+.*?\s+FROM\s+.*?\s+WHERE\s+.*?['"]?\s*\+\s*['"]?/gi, desc: 'String concatenation in SQL' },
+                { pattern: /execute\s*\(\s*["']SELECT.*?\+/gi, desc: 'SQL execution with concatenation' }
+            ];
+            sqlPatterns.forEach(({pattern, desc}) => {
+                let match;
+                while ((match = pattern.exec(code)) !== null) {
+                    vulnerabilities.push({
+                        type: 'SQL Injection',
+                        severity: 'critical',
+                        description: `SQL Injection vulnerability: ${desc}. Attacker can manipulate queries and access data.`,
+                        code: match[0],
+                        line: getLineNumber(code, match.index),
+                        recommendation: 'Use Prepared Statements or PDO with parameterized queries.'
+                    });
+                }
+            });
+        }
+
+        function checkCSRF(code, vulnerabilities) {
+            const hasForm = /<form/gi.test(code);
+            const hasToken = /csrf|_token|authenticity_token/gi.test(code);
+            if (hasForm && !hasToken) {
+                vulnerabilities.push({
+                    type: 'CSRF - Cross-Site Request Forgery',
+                    severity: 'high',
+                    description: 'Form lacks CSRF token protection. Attacker can submit requests on behalf of the user.',
+                    code: 'Forms without CSRF protection',
+                    line: 'Multiple',
+                    recommendation: 'Add CSRF token to every form and validate it on the server. Use framework-provided protection.'
+                });
+            }
+        }
+
+        function checkIDOR(code, vulnerabilities) {
+            const idorPatterns = [
+                { pattern: /\$_(GET|POST)\['id'\]/gi, desc: 'Direct use of ID from user input' },
+                { pattern: /user_id\s*=\s*\$_(GET|POST|REQUEST)/gi, desc: 'Setting user_id from user input' },
+                { pattern: /file\s*=\s*\$_(GET|POST)/gi, desc: 'File access using user input' }
+            ];
+            idorPatterns.forEach(({pattern, desc}) => {
+                let match;
+                while ((match = pattern.exec(code)) !== null) {
+                    vulnerabilities.push({
+                        type: 'IDOR - Insecure Direct Object Reference',
+                        severity: 'high',
+                        description: `IDOR vulnerability: ${desc}. Users can access other users\' data.`,
+                        code: match[0],
+                        line: getLineNumber(code, match.index),
+                        recommendation: 'Validate user authorization before accessing resources. Use random UUIDs instead of sequential IDs.'
+                    });
+                }
+            });
+        }
+
+        function checkWeakCrypto(code, vulnerabilities) {
+            const cryptoPatterns = [
+                { pattern: /md5\s*\(/gi, desc: 'Use of MD5 (weak and insecure)', severity: 'high' },
+                { pattern: /sha1\s*\(/gi, desc: 'Use of SHA1 (weak)', severity: 'medium' },
+                { pattern: /base64_encode\s*\(/gi, desc: 'Base64 is not encryption!', severity: 'medium' },
+                { pattern: /mcrypt_/gi, desc: 'Use of deprecated mcrypt', severity: 'high' }
+            ];
+            cryptoPatterns.forEach(({pattern, desc, severity}) => {
+                let match;
+                while ((match = pattern.exec(code)) !== null) {
+                    vulnerabilities.push({
+                        type: 'Weak Cryptography',
+                        severity: severity,
+                        description: `Weak encryption: ${desc}`,
+                        code: match[0],
+                        line: getLineNumber(code, match.index),
+                        recommendation: 'Use bcrypt or Argon2 for passwords, AES-256 for sensitive data.'
+                    });
+                }
+            });
+        }
+
+        function checkPathTraversal(code, vulnerabilities) {
+            const pathPatterns = [
+                { pattern: /include\s*\(\s*\$_(GET|POST|REQUEST)/gi, desc: 'include with user input' },
+                { pattern: /require\s*\(\s*\$_(GET|POST|REQUEST)/gi, desc: 'require with user input' },
+                { pattern: /file_get_contents\s*\(\s*\$_(GET|POST)/gi, desc: 'Reading file from user input' },
+                { pattern: /readfile\s*\(\s*\$_(GET|POST)/gi, desc: 'readfile with user input' }
+            ];
+            pathPatterns.forEach(({pattern, desc}) => {
+                let match;
+                while ((match = pattern.exec(code)) !== null) {
+                    vulnerabilities.push({
+                        type: 'Path Traversal',
+                        severity: 'critical',
+                        description: `Path Traversal vulnerability: ${desc}. Attacker can read arbitrary files on server.`,
+                        code: match[0],
+                        line: getLineNumber(code, match.index),
+                        recommendation: 'Whitelist allowed files and sanitize paths (remove ../ etc.).'
+                    });
+                }
+            });
+        }
+
+        function checkCommandInjection(code, vulnerabilities) {
+            const cmdPatterns = [
+                { pattern: /exec\s*\([^)]*\$_(GET|POST|REQUEST)/gi, desc: 'exec with user input' },
+                { pattern: /shell_exec\s*\([^)]*\$_(GET|POST|REQUEST)/gi, desc: 'shell_exec with user input' },
+                { pattern: /system\s*\([^)]*\$_(GET|POST|REQUEST)/gi, desc: 'system with user input' },
+                { pattern: /passthru\s*\([^)]*\$_(GET|POST|REQUEST)/gi, desc: 'passthru with user input' }
+            ];
+            cmdPatterns.forEach(({pattern, desc}) => {
+                let match;
+                while ((match = pattern.exec(code)) !== null) {
+                    vulnerabilities.push({
+                        type: 'Command Injection',
+                        severity: 'critical',
+                        description: `Command Injection vulnerability: ${desc}. Attacker can execute OS commands.`,
+                        code: match[0],
+                        line: getLineNumber(code, match.index),
+                        recommendation: 'Avoid shell functions. If necessary, use escapeshellarg() and escapeshellcmd().'
+                    });
+                }
+            });
+        }
+
+        function checkHardcodedCredentials(code, vulnerabilities) {
+            const credPatterns = [
+                { pattern: /password\s*=\s*["'][^"']{3,}["']/gi, desc: 'Hardcoded password' },
+                { pattern: /api[_-]?key\s*=\s*["'][^"']{10,}["']/gi, desc: 'Hardcoded API key' },
+                { pattern: /secret\s*=\s*["'][^"']{5,}["']/gi, desc: 'Hardcoded secret' },
+                { pattern: /token\s*=\s*["'][^"']{10,}["']/gi, desc: 'Hardcoded token' }
+            ];
+            credPatterns.forEach(({pattern, desc}) => {
+                let match;
+                while ((match = pattern.exec(code)) !== null) {
+                    if (match[0].includes('your_') || match[0].includes('xxx') || match[0].includes('...')) continue;
+                    vulnerabilities.push({
+                        type: 'Hardcoded Credentials',
+                        severity: 'high',
+                        description: `Secret data hardcoded: ${desc}`,
+                        code: match[0].substring(0, 30) + '...',
+                        line: getLineNumber(code, match.index),
+                        recommendation: 'Store secrets in .env files or secret management systems.'
+                    });
+                }
+            });
+        }
+
+        function checkInsecureDeserialization(code, vulnerabilities) {
+            const deserPatterns = [
+                { pattern: /unserialize\s*\(\s*\$_(GET|POST|REQUEST)/gi, desc: 'unserialize with user input' },
+                { pattern: /JSON\.parse\s*\([^)]*(?!sanitize)/gi, desc: 'JSON.parse without validation' },
+                { pattern: /pickle\.loads/gi, desc: 'Use of pickle.loads (Python)' }
+            ];
+            deserPatterns.forEach(({pattern, desc}) => {
+                let match;
+                while ((match = pattern.exec(code)) !== null) {
+                    vulnerabilities.push({
+                        type: 'Insecure Deserialization',
+                        severity: 'high',
+                        description: `Insecure Deserialization: ${desc}. Attacker can execute malicious code.`,
+                        code: match[0],
+                        line: getLineNumber(code, match.index),
+                        recommendation: 'Avoid unserialize on untrusted data. Use JSON instead.'
+                    });
+                }
+            });
+        }
+
+        function checkSecurityHeaders(code, vulnerabilities) {
+            const securityHeaders = ['X-Frame-Options','X-Content-Type-Options','Content-Security-Policy','X-XSS-Protection','Strict-Transport-Security'];
+            let missingHeaders = [];
+            securityHeaders.forEach(header => {
+                if (!code.includes(header)) missingHeaders.push(header);
+            });
+            if (missingHeaders.length > 0) {
+                vulnerabilities.push({
+                    type: 'Missing Security Headers',
+                    severity: 'medium',
+                    description: `Missing security headers: ${missingHeaders.join(', ')}`,
+                    code: 'Response Headers',
+                    line: 'N/A',
+                    recommendation: 'Add security headers to protect against various attacks.'
+                });
+            }
+        }
+
+        function checkWeakPasswordRules(code, vulnerabilities) {
+            const weakPatterns = [
+                { pattern: /password\.length\s*[<>=]+\s*[1-5]/gi, desc: 'Weak password length requirement (<6 characters)' },
+                { pattern: /strlen\s*\(\s*\$password\s*\)\s*[<>=]+\s*[1-5]/gi, desc: 'Weak password requirement in PHP' }
+            ];
+            weakPatterns.forEach(({pattern, desc}) => {
+                let match;
+                while ((match = pattern.exec(code)) !== null) {
+                    vulnerabilities.push({
+                        type: 'Weak Password Requirements',
+                        severity: 'medium',
+                        description: desc,
+                        code: match[0],
+                        line: getLineNumber(code, match.index),
+                        recommendation: 'Enforce strong passwords: at least 8 characters with uppercase, lowercase, numbers, and symbols.'
+                    });
+                }
+            });
+        }
+
+        function checkOpenRedirects(code, vulnerabilities) {
+            const redirectPatterns = [
+                { pattern: /header\s*\(\s*["']Location:\s*["']\s*\.\s*\$_(GET|POST)/gi, desc: 'Open redirect in PHP' },
+                { pattern: /window\.location\s*=\s*.*?\$\{/gi, desc: 'Open redirect in JavaScript' }
+            ];
+            redirectPatterns.forEach(({pattern, desc}) => {
+                let match;
+                while ((match = pattern.exec(code)) !== null) {
+                    vulnerabilities.push({
+                        type: 'Open Redirect',
+                        severity: 'medium',
+                        description: `Open Redirect vulnerability: ${desc}. Can be used in phishing attacks.`,
+                        code: match[0],
+                        line: getLineNumber(code, match.index),
+                        recommendation: 'Validate URLs before redirecting. Whitelist allowed domains.'
+                    });
+                }
+            });
+        }
+
+        function checkInformationDisclosure(code, vulnerabilities) {
+            const infoPatterns = [
+                { pattern: /error_reporting\s*\(\s*E_ALL/gi, desc: 'Displaying all errors' },
+                { pattern: /display_errors\s*=\s*(on|1)/gi, desc: 'Error display enabled' },
+                { pattern: /console\.log\s*\([^)]*password/gi, desc: 'Logging passwords to console' }
+            ];
+            infoPatterns.forEach(({pattern, desc}) => {
+                let match;
+                while ((match = pattern.exec(code)) !== null) {
+                    vulnerabilities.push({
+                        type: 'Information Disclosure',
+                        severity: 'low',
+                        description: `Information leak: ${desc}`,
+                        code: match[0],
+                        line: getLineNumber(code, match.index),
+                        recommendation: 'Disable error display in production and use secure logging.'
+                    });
+                }
+            });
+        }
+
+        function getLineNumber(code, index) {
+            return code.substring(0, index).split('\n').length;
+        }
+
+        function displayResults(vulnerabilities) {
+            const resultsSection = document.getElementById('results');
+            const statsDiv = document.getElementById('stats');
+            const vulnerabilitiesDiv = document.getElementById('vulnerabilities');
+            resultsSection.style.display = 'block';
+
+            const stats = {
+                critical: vulnerabilities.filter(v => v.severity === 'critical').length,
+                high: vulnerabilities.filter(v => v.severity === 'high').length,
+                medium: vulnerabilities.filter(v => v.severity === 'medium').length,
+                low: vulnerabilities.filter(v => v.severity === 'low').length,
+                total: vulnerabilities.length
+            };
+
+            statsDiv.innerHTML = `
+                <div class="stat-box critical"><span class="stat-number">${stats.critical}</span><span class="stat-label">Critical</span></div>
+                <div class="stat-box high"><span class="stat-number">${stats.high}</span><span class="stat-label">High</span></div>
+                <div class="stat-box medium"><span class="stat-number">${stats.medium}</span><span class="stat-label">Medium</span></div>
+                <div class="stat-box low"><span class="stat-number">${stats.low}</span><span class="stat-label">Low</span></div>
+                <div class="stat-box total"><span class="stat-number">${stats.total}</span><span class="stat-label">Total</span></div>
+            `;
+
+            if (vulnerabilities.length === 0) {
+                vulnerabilitiesDiv.innerHTML = `
+                    <div class="no-vulnerabilities">
+                        <h2>✅ Excellent!</h2>
+                        <p>No obvious security vulnerabilities detected in the code</p>
+                    </div>
+                `;
+            } else {
+                vulnerabilitiesDiv.innerHTML = vulnerabilities.map(vuln => `
+                    <div class="vulnerability-card ${vuln.severity}">
+                        <div class="vulnerability-header">
+                            <div class="vulnerability-title">${vuln.type}</div>
+                            <span class="severity-badge severity-${vuln.severity}">${getSeverityLabel(vuln.severity)}</span>
+                        </div>
+                        <div class="vulnerability-description">${vuln.description}</div>
+                        <div><strong>Line:</strong> ${vuln.line}</div>
+                        <div class="code-snippet">${escapeHtml(vuln.code)}</div>
+                        <div class="recommendation">
+                            <div class="recommendation-title">💡 Recommended Fix:</div>
+                            <div class="recommendation-text">${vuln.recommendation}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function getSeverityLabel(severity) {
+            const labels = { 'critical': 'Critical', 'high': 'High', 'medium': 'Medium', 'low': 'Low' };
+            return labels[severity] || severity;
+        }
+
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+    </script>
+</body>
+</html>
